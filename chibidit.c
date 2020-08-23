@@ -106,18 +106,21 @@ void refreshScreen(void) {
             continue;
         }
 
-        //r = &EC.row[filerow];
+        r = &EC.row[filerow];
 
-        //int len = r->size - EC.coloff;
-        //int current_color = -1;
-        //if (len > 0) {
-        //   if (len > EC.screencols) 
-        //       len = EC.screencols;
-        //   char *c = r->render + EC.coloff;
-        //   for (int j = 0; j < len; j++) {
-
-        //   }
-        //}
+        int len = r->size - EC.coloff;
+        int current_color = -1;
+        if (len > 0) {
+           if (len > EC.screencols) 
+               len = EC.screencols;
+           char *c = r->render + EC.coloff;
+           for (int j = 0; j < len; j++) {
+               abAppend(&ab, c + j, 1);
+           }
+        }
+        abAppend(&ab, "\x1b[39m", 5);
+        abAppend(&ab, "\x1b[0K", 4);
+        abAppend(&ab, "\r\n", 2);
     }
 
     write(STDOUT_FILENO, ab.b, ab.len);
