@@ -1,3 +1,4 @@
+#include <termios.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,8 +70,7 @@ void refreshScreen(void) {
     abAppend(&ab, "\x1b[?25l", 6);
     // Go home
     abAppend(&ab, "\x1b[H", 3);
-    printf("%d\n", EC.screenrows);
-    for (y = 0; y < EC.screenrows; y++) {
+    for (y = 0; y < EC.screenrows + 1; y++) {
         int filerow = EC.rowoff + y;
 
         // Open initialized editor home
@@ -241,12 +241,131 @@ void initEditor(void) {
     signal(SIGWINCH, handleSigWinCh);
 }
 
+// In order to restore at exit.
+static struct termios orig_termios;
+
+void disableRawMode(int fd) {
+    if (EC.rawmode) {
+        tcsetattr(fd, TCSAFLUSH, &orig_termios);
+        EC.rawmode = 0;
+    }
+}
+
+void atExit(void) {
+    disableRawMode(STDIN_FILENO);
+}
+
+int enableRawMode(int fd) {
+    struct termios raw;
+
+    // Already enabled.
+    if (EC.rawmode)
+        return 0;
+    atexit(atExit);
+    if (tcgetattr(fd, &orig_termios) == -1) {
+        errno = ENOTTY;
+        return -1;
+    }
+
+    // Modify the original mode.
+    raw = orig_termios;
+    // Input modes: no break, no CR to NL, no parity check, no strip char,
+    // no start/stop output control.
+    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    // Output modes - disable post processing.
+    raw.c_oflag &= ~(OPOST);
+    // Control modes - set 8 bit chars.
+    raw.c_cflag |= (CS8);
+    // Local modes - choing off, canonical off, no extended functions,
+    // no signal chars (^Z, ^C).
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    // Control chars - set return condition: min number of bytes and timer.
+    raw.c_cc[VMIN] = 0; // Return each byte, or zero for timeout.
+    raw.c_cc[VTIME] = 1; // 100 ms timeout (unit is tens of second).
+
+    // Put terminal in raw mode after flushing.
+    if (tcsetattr(fd, TCSAFLUSH, &raw) < 0) {
+        errno = ENOTTY;
+        return -1;
+    }
+    EC.rawmode = 1;
+    return 0;
+}
+
 int readKey(int fd) {
     int nread;
     char c, seq[3];
-    while ((nread = read(fd, &c, 1)) == 0);
-    if (nread == -1)
-        exit(1);
+    while ((nread = read(fd,&c,1)) == 0);
+    if (nread == -1) exit(1);
+
+    while(1) {
+        switch(c) {
+        case ESC:    /* escape sequence */
+            /* If this is just an ESC, we'll timeout here. */
+            if (read(fd,seq,1) == 0) return ESC;
+            if (read(fd,seq+1,1) == 0) return ESC;
+
+            /* ESC [ sequences. */
+            if (seq[0] == '[') {
+                if (seq[1] >= '0' && seq[1] <= '9') {
+                    /* Extended escape, read additional byte. */
+                    if (read(fd,seq+2,1) == 0) return ESC;
+                    if (seq[2] == '~') {
+                        switch(seq[1]) {
+                        case '3': return DEL_KEY;
+                        case '5': return PAGE_UP;
+                        case '6': return PAGE_DOWN;
+                        }
+                    }
+                } else {
+                    switch(seq[1]) {
+                    case 'A': return ARROW_UP;
+                    case 'B': return ARROW_DOWN;
+                    case 'C': return ARROW_RIGHT;
+                    case 'D': return ARROW_LEFT;
+                    case 'H': return HOME_KEY;
+                    case 'F': return END_KEY;
+                    }
+                }
+            }
+
+            /* ESC O sequences. */
+            else if (seq[0] == 'O') {
+                switch(seq[1]) {
+                case 'H': return HOME_KEY;
+                case 'F': return END_KEY;
+                }
+            }
+            break;
+        default:
+            return c;
+        }
+    }
+}
+
+char *rowsToString(int *buflen) {
+    char *buf = NULL, *p;
+    int totlen = 0;
+
+    for (int i = 0; i < EC.numrows; i++)
+        totlen += EC.row[i].size + 1; // +1 is for "\n" at end of every row
+    *buflen = totlen;
+    totlen++; // Also make space for nulterm
+
+    p = buf = malloc(totlen);
+    for (int j = 0; j < EC.numrows; j++) {
+        memcpy(p, EC.row[j].chars, EC.row[j].size);
+        p += EC.row[j].size;
+        *p = '\n';
+        p++;
+    }
+    *p = '\0';
+    return buf;
+}
+
+int save(void) {
+    int len;
+    char *buf = rowsToString(&len);
 }
 
 #define QUIT_TIMES 3
@@ -254,6 +373,17 @@ void processKeyPress(int fd) {
     static int quit_times = QUIT_TIMES;
 
     int c = readKey(fd);
+    printf("%d\n", c);
+    switch (c) {
+    case CTRL_C: // Ignore ctrl-c
+        break;
+    case CTRL_Q: // Quit
+        exit(0);
+        break;
+    case CTRL_S: // Save
+        save();
+        break;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -264,12 +394,12 @@ int main(int argc, char **argv) {
 
     initEditor();
     editorOpen(argv[1]);
+    enableRawMode(STDIN_FILENO);
 
-    //while(1) {
-    //    refreshScreen();
-    //    processKeyPress(STDIN_FILENO);
-    //}
-    refreshScreen();
+    while(1) {
+        refreshScreen();
+        processKeyPress(STDIN_FILENO);
+    }
     
     return 0;
 }
