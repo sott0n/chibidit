@@ -33,6 +33,15 @@ void updateRow(Erow *row) {
     row->render[idx] = '\0';
 }
 
+// Delete the character at offset 'at' from the specified row.
+void rowDelChar(Erow *row, int at) {
+    if (row->size <= at)
+        return;
+    memmove(row->chars + at, row->chars + at + 1, row->size - at);
+    updateRow(row);
+    row->size--;
+}
+
 void insertRow(int at, char *s, size_t len) {
     if (at > EC.numrows) return;
     EC.row = realloc(EC.row, sizeof(Erow) * (EC.numrows + 1));
@@ -71,7 +80,7 @@ void refreshScreen(void) {
     // Go home
     abAppend(&ab, "\x1b[H", 3);
     for (y = 0; y < EC.screenrows + 1; y++) {
-        int filerow = EC.rowoff + y;
+        int filerow = EC.row_offset + y;
 
         // Open initialized editor home
         if (filerow >= EC.numrows) {
@@ -108,12 +117,12 @@ void refreshScreen(void) {
 
         r = &EC.row[filerow];
 
-        int len = r->size - EC.coloff;
+        int len = r->size - EC.col_offset;
         int current_color = -1;
         if (len > 0) {
            if (len > EC.screencols) 
                len = EC.screencols;
-           char *c = r->render + EC.coloff;
+           char *c = r->render + EC.col_offset;
            for (int j = 0; j < len; j++) {
                abAppend(&ab, c + j, 1);
            }
@@ -233,8 +242,8 @@ void handleSigWinCh(int unused __attribute__((unused))) {
 void initEditor(void) {
     EC.cx = 0;
     EC.cy = 0;
-    EC.rowoff = 0;
-    EC.coloff = 0;
+    EC.row_offset = 0;
+    EC.col_offset = 0;
     EC.numrows = 0;
     EC.row = NULL;
     updateWindowSize();
@@ -368,13 +377,116 @@ int save(void) {
     char *buf = rowsToString(&len);
 }
 
+void insertNewLine(void) {
+    int filerow = EC.row_offset + EC.cy;
+    int filecol = EC.col_offset + EC.cx;
+
+    Erow *row = (filerow >= EC.numrows) ? NULL : &EC.row[filerow];
+
+    if (!row) {
+        if (filerow == EC.numrows) {
+            insertRow(filerow, "", 0);
+            if (EC.cy == EC.screenrows - 1) {
+                EC.row_offset++;
+            } else {
+                EC.cy++;
+            }
+            EC.cx = 0;
+            EC.col_offset = 0;
+        }
+        return;
+    }
+
+    // If the cursor is over the current line size, we want to conceptually
+    // think it's just over the last character.
+    if (filecol >= row->size)
+        filecol = row->size;
+    if (filecol == 0) {
+        insertRow(filerow, "", 0);
+    } else {
+        // We are in the middle of a line. Split it between two rows.
+        insertRow(filerow + 1, row->chars + filecol, row->size - filecol);
+        row = &EC.row[filerow];
+        row->chars[filecol] = '\0';
+        row->size = filecol;
+        updateRow(row);
+    }
+}
+
+// Append the string 's' at the end of a row
+void rowAppendString(Erow *row, char *s, size_t len) {
+    row->chars = realloc(row->chars, row->size + len + 1);
+    memcpy(row->chars + row->size, s, len);
+    row->size += len;
+    row->chars[row->size] = '\0';
+    updateRow(row);
+}
+
+void freeRow(Erow *row) {
+    free(row->render);
+    free(row->chars);
+}
+
+// Remove the row at the specified posision, shifting the remaining
+// on the top.
+void delRow(int at) {
+    Erow *row;
+
+    if (at >= EC.numrows)
+        return;
+    row = EC.row + at;
+    freeRow(row);
+    memmove(EC.row + at, EC.row + at + 1, sizeof(EC.row[0]) * (EC.numrows - at - 1));
+    for (int j = at; j < EC.numrows - 1; j++)
+        EC.row[j].idx++;
+
+    EC.numrows--;
+}
+
+void delChar() {
+    int filerow = EC.row_offset + EC.cy;
+    int filecol = EC.col_offset + EC.cx;
+    Erow *row = (filerow > EC.numrows) ? NULL : &EC.row[filerow];
+
+    if (!row || (filecol == 0 && filerow == 0))
+        return;
+    if (filecol == 0) {
+        // Handle the case of column 0, we need to move the current line
+        // on the right of the previous one.
+        filecol = EC.row[filerow - 1].size;
+        rowAppendString(&EC.row[filerow - 1], row->chars, row->size);
+        delRow(filerow);
+        row = NULL;
+        if (EC.cy == 0)
+            EC.row_offset--;
+        else
+            EC.cy--;
+        EC.cx = filecol;
+        if (EC.cx >= EC.screencols) {
+            int shift = (EC.screencols - EC.cx) + 1;
+            EC.cx -= shift;
+            EC.col_offset += shift;
+        }
+    } else {
+        rowDelChar(row, filecol - 1);
+        if (EC.cx == 0 && EC.col_offset)
+            EC.col_offset--;
+        else
+            EC.cx--;
+    }
+    if (row)
+        updateRow(row);
+}
+
 #define QUIT_TIMES 3
 void processKeyPress(int fd) {
     static int quit_times = QUIT_TIMES;
 
     int c = readKey(fd);
-    printf("%d\n", c);
     switch (c) {
+    case ENTER:  // Enter
+        insertNewLine();
+        break;
     case CTRL_C: // Ignore ctrl-c
         break;
     case CTRL_Q: // Quit
@@ -382,6 +494,11 @@ void processKeyPress(int fd) {
         break;
     case CTRL_S: // Save
         save();
+        break;
+    case BACKSPACE:
+    case CTRL_H:
+    case DEL_KEY:
+        delChar();
         break;
     }
 }

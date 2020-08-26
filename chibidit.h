@@ -9,13 +9,13 @@ typedef struct Erow {
 } Erow;
 
 struct EditorConf {
-    int cx, cy;
-    int rowoff;
-    int coloff;
-    int screenrows;
-    int screencols;
-    int numrows;
-    int rawmode;
+    int cx, cy;         /* Cursor x and y position in characters */
+    int row_offset;     /* Offset of row displayed */
+    int col_offset;     /* Offset of colunm displayed */
+    int screenrows;     /* Number of rows that we can show at display */
+    int screencols;     /* Number of columns that we can show at display */
+    int numrows;        /* Number of rows */
+    int rawmode;        /* Is terminal raw mode enabled ? */
     Erow *row;
 };
 
