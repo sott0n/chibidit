@@ -120,11 +120,12 @@ void refreshScreen(void) {
         int len = r->size - EC.col_offset;
         int current_color = -1;
         if (len > 0) {
-           if (len > EC.screencols) 
-               len = EC.screencols;
-           char *c = r->render + EC.col_offset;
-           for (int j = 0; j < len; j++) {
-               abAppend(&ab, c + j, 1);
+            if (len > EC.screencols)
+                len = EC.screencols;
+
+            char *c = r->render + EC.col_offset;
+            for (int j = 0; j < len; j++) {
+                abAppend(&ab, c + j, 1);
            }
         }
         abAppend(&ab, "\x1b[39m", 5);
@@ -132,6 +133,20 @@ void refreshScreen(void) {
         abAppend(&ab, "\r\n", 2);
     }
 
+    // Display cursor at its current position.
+    int cx = 1;
+    int filerow = EC.row_offset + EC.cy;
+    Erow *row = (filerow >= EC.numrows) ? NULL : &EC.row[filerow];
+    if (row) {
+        for (int j = EC.col_offset; j < (EC.cx + EC.col_offset); j++) {
+            if (j < row->size && row->chars[j] == TAB)
+                cx += 7 - ((cx) % 8);
+            cx++;
+        }
+    }
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", EC.cy + 1, cx);
+    abAppend(&ab, buf, strlen(buf));
+    abAppend(&ab, "\x1b[?25h", 6);
     write(STDOUT_FILENO, ab.b, ab.len);
     abFree(&ab);
 }
@@ -171,7 +186,7 @@ int getCursorPosition(int ifd, int ofd, int *rows, int *cols) {
 
     // Read the response: ESC [ row; cols R
     while (i < sizeof(buf) - 1) {
-        if (read(ifd, buf + 1, 1) != 1)
+        if (read(ifd, buf + i, 1) != 1)
             break;
         if (buf[i] == 'R')
             break;

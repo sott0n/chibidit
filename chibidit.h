@@ -1,11 +1,12 @@
 #define _POSIX_C_SOURCE 200809L
 
 typedef struct Erow {
-    int idx;
-    int size;
-    int rsize;
-    char *chars;
-    char *render;
+    int idx;            /* Row index in the file, zero-based. */
+    int size;           /* Size of the row, excluding the null term. */
+    int rsize;          /* Size of the rendered row. */
+    char *chars;        /* Row content. */
+    char *render;       /* Row content "rendered" for screen (for TABs) */
+    unsigned char *hl;  /* Syntax highlight type for each character in render. */
 } Erow;
 
 struct EditorConf {
