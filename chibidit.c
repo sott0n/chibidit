@@ -493,6 +493,77 @@ void delChar() {
         updateRow(row);
 }
 
+void moveCursor(int key) {
+    int filerow = EC.row_offset + EC.cy;
+    int filecol = EC.col_offset + EC.cx;
+    int rowlen;
+    Erow *row = (filerow >= EC.numrows) ? NULL : &EC.row[filerow];
+
+    switch (key) {
+    case ARROW_LEFT:
+        if (EC.cx == 0) {
+            if (EC.col_offset) {
+                EC.col_offset--;
+            } else {
+                if (filerow > 0) {
+                    EC.cy--;
+                    EC.cx = EC.row[filerow - 1].size;
+                    if (EC.cx > EC.screencols - 1) {
+                        EC.col_offset = EC.cx - EC.screencols + 1;
+                        EC.cx = EC.screencols - 1;
+                    }
+                }
+            }
+        } else {
+            EC.cx -= 1;
+        }
+        break;
+    case ARROW_RIGHT:
+        if (row && filecol < row->size) {
+            if (EC.cx == EC.screencols - 1)
+                EC.col_offset++;
+            else
+                EC.cx += 1;
+        } else if (row && filecol == row->size) {
+            EC.cx = 0;
+            EC.col_offset = 0;
+            if (EC.cy == EC.screenrows - 1)
+                EC.row_offset++;
+            else
+                EC.cx += 1;
+        }
+        break;
+    case ARROW_UP:
+        if (EC.cy == 0) {
+            if (EC.row_offset)
+                EC.row_offset--;
+        } else {
+            EC.cy -= 1;
+        }
+        break;
+    case ARROW_DOWN:
+        if (filerow < EC.numrows) {
+            if (EC.cy == EC.screenrows - 1)
+                EC.row_offset++;
+            else
+                EC.cy += 1;
+        }
+        break;
+    }
+    // Fix cx if the current line has not enough chars.
+    filerow = EC.row_offset + EC.cy;
+    filecol = EC.col_offset + EC.cx;
+    row = (filerow >= EC.numrows) ? NULL : &EC.row[filerow];
+    rowlen = row ? row->size : 0;
+    if (filecol > rowlen) {
+        EC.cx -= filecol - rowlen;
+        if (EC.cx < 0) {
+            EC.col_offset += EC.cx;
+            EC.cx = 0;
+        }
+    }
+}
+
 #define QUIT_TIMES 3
 void processKeyPress(int fd) {
     static int quit_times = QUIT_TIMES;
@@ -514,6 +585,12 @@ void processKeyPress(int fd) {
     case CTRL_H:
     case DEL_KEY:
         delChar();
+        break;
+    case ARROW_UP:
+    case ARROW_DOWN:
+    case ARROW_LEFT:
+    case ARROW_RIGHT:
+        moveCursor(c);
         break;
     }
 }
