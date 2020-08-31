@@ -98,7 +98,10 @@ void insertChar(int c) {
     }
     row = &EC.row[filerow];
     rowInsertChar(row, filecol, c);
-
+    if (EC.cx == EC.screencols - 1)
+        EC.col_offset++;
+    else
+        EC.cx++;
 }
 
 void abAppend(struct abuf *ab, const char *s, int len) {
