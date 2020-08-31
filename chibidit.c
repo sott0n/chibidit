@@ -485,13 +485,7 @@ void insertNewLine(void) {
     if (!row) {
         if (filerow == EC.numrows) {
             insertRow(filerow, "", 0);
-            if (EC.cy == EC.screenrows - 1) {
-                EC.row_offset++;
-            } else {
-                EC.cy++;
-            }
-            EC.cx = 0;
-            EC.col_offset = 0;
+            goto fixcursor;
         }
         return;
     }
@@ -510,6 +504,15 @@ void insertNewLine(void) {
         row->size = filecol;
         updateRow(row);
     }
+
+fixcursor:
+    if (EC.cy == EC.screenrows - 1) {
+        EC.row_offset++;
+    } else {
+        EC.cy++;
+    }
+    EC.cx = 0;
+    EC.col_offset = 0;
 }
 
 // Append the string 's' at the end of a row
