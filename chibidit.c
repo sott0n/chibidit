@@ -4,8 +4,10 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/ioctl.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #include "chibidit.h"
 
@@ -40,6 +42,7 @@ void rowDelChar(Erow *row, int at) {
     memmove(row->chars + at, row->chars + at + 1, row->size - at);
     updateRow(row);
     row->size--;
+    EC.dirty++;
 }
 
 void insertRow(int at, char *s, size_t len) {
@@ -59,6 +62,7 @@ void insertRow(int at, char *s, size_t len) {
     EC.row[at].idx = at;
     updateRow(EC.row + at);
     EC.numrows++;
+    EC.dirty++;
 }
 
 // Insert a character at the specified position in a row, moving the remaining
@@ -82,6 +86,7 @@ void rowInsertChar(Erow *row, int at, int c) {
     }
     row->chars[at] = c;
     updateRow(row);
+    EC.dirty++;
 }
 
 void insertChar(int c) {
@@ -102,6 +107,7 @@ void insertChar(int c) {
         EC.col_offset++;
     else
         EC.cx++;
+    EC.dirty++;
 }
 
 void abAppend(struct abuf *ab, const char *s, int len) {
@@ -202,10 +208,16 @@ void refreshScreen(void) {
 int editorOpen(char *filename) {
     FILE *fp;
 
+    EC.dirty = 0;
+    free(EC.filename);
+    size_t fnlen = strlen(filename) + 1;
+    EC.filename = malloc(fnlen);
+    memcpy(EC.filename, filename, fnlen);
+
     fp = fopen(filename, "r");
     if (!fp) {
         if (errno != ENOENT) {
-            perror("Not found a file");
+            perror("Opening file");
             exit(1);
         }
         return 1;
@@ -221,6 +233,7 @@ int editorOpen(char *filename) {
     }
     free(line);
     fclose(fp);
+    EC.dirty = 0;
     return 0;
 }
 
@@ -309,6 +322,8 @@ void initEditor(void) {
     EC.col_offset = 0;
     EC.numrows = 0;
     EC.row = NULL;
+    EC.dirty = 0;
+    EC.filename = NULL;
     updateWindowSize();
     signal(SIGWINCH, handleSigWinCh);
 }
@@ -438,6 +453,27 @@ char *rowsToString(int *buflen) {
 int save(void) {
     int len;
     char *buf = rowsToString(&len);
+    int fd = open(EC.filename, O_RDWR | O_CREAT, 0644);
+    if (fd == -1)
+        goto err;
+
+    // Use truncate + a single write(2) call in order to make saving
+    // a bit safer, under the limits of what we can do in a small editor.
+    if (ftruncate(fd, len) == -1)
+        goto err;
+    if (write(fd, buf, len) != -1)
+        goto err;
+
+    close(fd);
+    free(buf);
+    EC.dirty = 0;
+    return 0;
+
+err:
+    free(buf);
+    if (fd != -1)
+        close(fd);
+    return 1;
 }
 
 void insertNewLine(void) {
@@ -483,6 +519,7 @@ void rowAppendString(Erow *row, char *s, size_t len) {
     row->size += len;
     row->chars[row->size] = '\0';
     updateRow(row);
+    EC.dirty++;
 }
 
 void freeRow(Erow *row) {
@@ -504,6 +541,7 @@ void delRow(int at) {
         EC.row[j].idx++;
 
     EC.numrows--;
+    EC.dirty++;
 }
 
 void delChar() {
@@ -539,6 +577,7 @@ void delChar() {
     }
     if (row)
         updateRow(row);
+    EC.dirty++;
 }
 
 void moveCursor(int key) {

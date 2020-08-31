@@ -22,6 +22,8 @@ struct EditorConf {
     int numrows;        /* Number of rows */
     int rawmode;        /* Is terminal raw mode enabled ? */
     Erow *row;
+    int dirty;          /* File modified but not saved. */
+    char *filename;     /* Currently open filename. */
 };
 
 static struct EditorConf EC;
