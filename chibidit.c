@@ -61,6 +61,46 @@ void insertRow(int at, char *s, size_t len) {
     EC.numrows++;
 }
 
+// Insert a character at the specified position in a row, moving the remaining
+// chars on the right if needed.
+void rowInsertChar(Erow *row, int at, int c) {
+    if (at > row->size) {
+        // Pad the string with spaces if the insert location is outside the
+        // current length by more than a single character.
+        int padlen = at - row->size;
+        // In the next line +2 means: new char and null term.
+        row->chars = realloc(row->chars, row->size + padlen + 2);
+        memset(row->chars + row->size, ' ', padlen);
+        row->chars[row->size + padlen + 1] = '\0';
+        row->size += padlen + 1;
+    } else {
+        // If we are in the middle of the string just make space for 1 new
+        // char plus the (already existing) null term.
+        row->chars = realloc(row->chars, row->size + 2);
+        memmove(row->chars + at + 1, row->chars + at, row->size - at + 1);
+        row->size++;
+    }
+    row->chars[at] = c;
+    updateRow(row);
+}
+
+void insertChar(int c) {
+    int filerow = EC.row_offset + EC.cy;
+    int filecol = EC.col_offset + EC.cx;
+    Erow *row = (filerow >= EC.numrows) ? NULL : &EC.row[filerow];
+
+    // If the row where the cursor is currently located does not exist
+    // in our logical representation of the file, add enough empty rows
+    // as needed.
+    if (!row) {
+        while(EC.numrows <= filerow)
+            insertRow(EC.numrows, "", 0);
+    }
+    row = &EC.row[filerow];
+    rowInsertChar(row, filecol, c);
+
+}
+
 void abAppend(struct abuf *ab, const char *s, int len) {
     char *new = realloc(ab->b, ab->len + len);
     if (new == NULL)
@@ -596,6 +636,9 @@ void processKeyPress(int fd) {
     case ARROW_LEFT:
     case ARROW_RIGHT:
         moveCursor(c);
+        break;
+    default:
+        insertChar(c);
         break;
     }
 }
