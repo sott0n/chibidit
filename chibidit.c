@@ -45,6 +45,11 @@ void rowDelChar(Erow *row, int at) {
 void insertRow(int at, char *s, size_t len) {
     if (at > EC.numrows) return;
     EC.row = realloc(EC.row, sizeof(Erow) * (EC.numrows + 1));
+    if (at != EC.numrows) {
+        memmove(EC.row + at + 1, EC.row + at, sizeof(EC.row[0]) * (EC.numrows - at));
+        for (int j = at + 1; j <= EC.numrows; j++)
+            EC.row[j].idx++;
+    }
 
     EC.row[at].size = len;
     EC.row[at].chars = malloc(len + 1);

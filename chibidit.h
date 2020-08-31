@@ -1,5 +1,9 @@
 #define _POSIX_C_SOURCE 200809L
 
+// Syntax highlight types
+#define HL_NORMAL 0
+#define HL_NONPRINT 1
+
 typedef struct Erow {
     int idx;            /* Row index in the file, zero-based. */
     int size;           /* Size of the row, excluding the null term. */
@@ -36,6 +40,7 @@ enum KEY_ACTIONS {
         CTRL_U = 21,        /* Ctrl-u */
         ESC = 27,           /* Escape */
         BACKSPACE =  127,   /* Backspace */
+
         /* The following are just soft codes, not really reported by the
          * terminal directly. */
         ARROW_LEFT = 1000,
