@@ -1,5 +1,6 @@
 #include <termios.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -10,6 +11,14 @@
 #include <fcntl.h>
 
 #include "chibidit.h"
+
+void setStatusMsg(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(EC.statusmsg, sizeof(EC.statusmsg), fmt, ap);
+    va_end(ap);
+    EC.statusmsg_time = time(NULL);
+}
 
 void updateRow(Erow *row) {
     unsigned int tabs = 0, nonprint = 0;
@@ -489,12 +498,13 @@ int save(void) {
     // a bit safer, under the limits of what we can do in a small editor.
     if (ftruncate(fd, len) == -1)
         goto err;
-    if (write(fd, buf, len) != -1)
+    if (write(fd, buf, len) != len)
         goto err;
 
     close(fd);
     free(buf);
     EC.dirty = 0;
+    setStatusMsg("%d bytes written on disk", len);
     return 0;
 
 err:
@@ -694,6 +704,13 @@ void processKeyPress(int fd) {
     case CTRL_C: // Ignore ctrl-c
         break;
     case CTRL_Q: // Quit
+        // Quit if this file was already saved.
+        if (EC.dirty && quit_times) {
+            setStatusMsg("WARNING!! File has unsaved changes. "
+                    "Press Ctrl-Q %d more times to quit.", quit_times);
+            quit_times--;
+            return;
+        }
         exit(0);
         break;
     case CTRL_S: // Save
