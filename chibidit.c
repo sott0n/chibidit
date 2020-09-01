@@ -133,7 +133,7 @@ void refreshScreen(void) {
     abAppend(&ab, "\x1b[?25l", 6);
     // Go home
     abAppend(&ab, "\x1b[H", 3);
-    for (y = 0; y < EC.screenrows + 1; y++) {
+    for (y = 0; y < EC.screenrows; y++) {
         int filerow = EC.row_offset + y;
 
         // Open initialized editor home
@@ -172,7 +172,6 @@ void refreshScreen(void) {
         r = &EC.row[filerow];
 
         int len = r->size - EC.col_offset;
-        int current_color = -1;
         if (len > 0) {
             if (len > EC.screencols)
                 len = EC.screencols;
@@ -186,6 +185,35 @@ void refreshScreen(void) {
         abAppend(&ab, "\x1b[0K", 4);
         abAppend(&ab, "\r\n", 2);
     }
+
+    // Create a two status rows, First row.
+    abAppend(&ab, "\x1b[0K", 4);
+    abAppend(&ab, "\x1b[7m", 4);
+    char status[80], rstatus[80];
+    int len = snprintf(status, sizeof(status), "%.20s - %d lines %s",
+            EC.filename, EC.numrows, EC.dirty ? "(modified)" : "");
+    int rlen = snprintf(rstatus, sizeof(rstatus),
+            "%d/%d", EC.row_offset + EC.cy + 1, EC.numrows);
+
+    if (len > EC.screencols)
+        len = EC.screencols;
+    abAppend(&ab, status, len);
+    while (len < EC.screencols) {
+        if (EC.screencols - len == rlen) {
+            abAppend(&ab, rstatus, rlen);
+            break;
+        } else {
+            abAppend(&ab, " ", 1);
+            len++;
+        }
+    }
+    abAppend(&ab, "\x1b[0m\r\n", 6);
+
+    // Second row depends on EC.statusmsg and the status message update time.
+    abAppend(&ab, "\x1b[0K", 4);
+    int msglen = strlen(EC.statusmsg);
+    if (msglen && time(NULL) - EC.statusmsg_time < 5)
+        abAppend(&ab, EC.statusmsg, msglen <= EC.screencols ? msglen : EC.screencols);
 
     // Display cursor at its current position.
     int cx = 1;

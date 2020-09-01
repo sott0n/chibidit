@@ -1,5 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 
+#include <time.h>
+
 // Syntax highlight types
 #define HL_NORMAL 0
 #define HL_NONPRINT 1
@@ -24,6 +26,8 @@ struct EditorConf {
     Erow *row;
     int dirty;          /* File modified but not saved. */
     char *filename;     /* Currently open filename. */
+    char statusmsg[80];
+    time_t statusmsg_time;
 };
 
 static struct EditorConf EC;
