@@ -716,16 +716,42 @@ void processKeyPress(int fd) {
     case CTRL_S: // Save
         save();
         break;
+    case CTRL_F: // Find mode
+        // TODO: implement find string
+        break;
     case BACKSPACE:
     case CTRL_H:
     case DEL_KEY:
         delChar();
         break;
+    case PAGE_UP:
+    case PAGE_DOWN: {
+        int times = EC.screenrows;
+        if (c == PAGE_UP && EC.cy != 0) {
+            EC.cy = 0;
+            while(times--)
+                moveCursor(ARROW_UP);
+            break;
+        }
+
+        if (c == PAGE_DOWN && EC.cy != EC.screenrows - 1) {
+            EC.cy = EC.screenrows - 1;
+            while(times--)
+                moveCursor(ARROW_DOWN);
+            break;
+        }
+    }
     case ARROW_UP:
     case ARROW_DOWN:
     case ARROW_LEFT:
     case ARROW_RIGHT:
         moveCursor(c);
+        break;
+    case CTRL_L: // Clear screen.
+        break;
+    case ESC:
+        // TODO: switch mode
+        // normal <-> insert <-> command line <-> visualize
         break;
     default:
         insertChar(c);
