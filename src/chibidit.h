@@ -1,5 +1,16 @@
 #define _POSIX_C_SOURCE 200809L
 
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <signal.h>
+#include <fcntl.h>
 #include <time.h>
 
 // Syntax highlight types
@@ -30,7 +41,7 @@ struct EditorConf {
     time_t statusmsg_time;
 };
 
-static struct EditorConf EC;
+extern struct EditorConf EC;
 
 enum KEY_ACTIONS {
         KEY_NULL = 0,       /* NULL */
@@ -67,3 +78,30 @@ struct abuf {
 
 #define ABUF_INIT {NULL, 0};
 
+int editorOpen(char *filename);
+int save(void);
+int readKey(int fd);
+void atExit(void);
+int enableRawMode(int fd);
+void disableRawMode(int fd);
+int getCursorPosition(int ifd, int ofd, int *rows, int *cols);
+int getWindowSize(int ifd, int ofd, int *rows, int *cols);
+void moveCursor(int key);
+void processKeyPress(int fd);
+void updateWindowSize(void);
+void handleSigWinCh(int unused __attribute__((unused)));
+void setStatusMsg(const char *fmt, ...);
+void abAppend(struct abuf *ab, const char *s, int len);
+void abFree(struct abuf *ab);
+void refreshScreen(void);
+void updateRow(Erow *row);
+void rowDelChar(Erow *row, int at);
+void insertRow(int at, char *s, size_t len);
+void rowInsertChar(Erow *row, int at, int c);
+void insertNewLine(void);
+void delChar(void);
+void rowAppendString(Erow *row, char *s, size_t len);
+void freeRow(Erow *row);
+void delRow(int at);
+char *rowsToString(int *buflen);
+void insertChar(int c);
