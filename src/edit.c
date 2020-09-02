@@ -9,6 +9,13 @@ void updateRow(Erow *row) {
         if (row->chars[j] == TAB)
             tabs++;
 
+    unsigned long long allocsize =
+        (unsigned long long) row->size + tabs * 8 + nonprint * 9 + 1;
+    if (allocsize > UINT32_MAX) {
+        printf("Some line of the edited file is too long for chibidit\n");
+        exit(1);
+    }
+
     row->render = malloc(row->size + tabs * 8 + nonprint * 9 + 1);
     idx = 0;
     for (j = 0; j < row->size; j++) {
@@ -22,6 +29,8 @@ void updateRow(Erow *row) {
     }
     row->rsize = idx;
     row->render[idx] = '\0';
+
+    updateSyntaxHighLight(row);
 }
 
 // Delete the character at offset 'at' from the specified row.
@@ -46,6 +55,8 @@ void insertRow(int at, char *s, size_t len) {
     EC.row[at].size = len;
     EC.row[at].chars = malloc(len + 1);
     memcpy(EC.row[at].chars, s, len + 1);
+    EC.row[at].hl = NULL;
+    EC.row[at].hl_oc = 0;
     EC.row[at].render = NULL;
     EC.row[at].rsize = 0;
     EC.row[at].idx = at;
@@ -166,6 +177,7 @@ void rowAppendString(Erow *row, char *s, size_t len) {
 void freeRow(Erow *row) {
     free(row->render);
     free(row->chars);
+    free(row->hl);
 }
 
 // Remove the row at the specified posision, shifting the remaining

@@ -68,16 +68,41 @@ void refreshScreen(void) {
         }
 
         r = &EC.row[filerow];
-
         int len = r->size - EC.col_offset;
+        int current_color = -1;
         if (len > 0) {
             if (len > EC.screencols)
                 len = EC.screencols;
 
             char *c = r->render + EC.col_offset;
+            unsigned char *hl = r->hl + EC.col_offset;
             for (int j = 0; j < len; j++) {
-                abAppend(&ab, c + j, 1);
-           }
+                if (hl[j] == HL_NONPRINT) {
+                    char sym;
+                    abAppend(&ab, "\x1b[7m", 4);
+                    if (c[j] <= 26)
+                        sym = '@' + c[j];
+                    else
+                        sym = '?';
+                    abAppend(&ab, &sym, 1);
+                    abAppend(&ab, "\x1b[0m", 4);
+                } else if (hl[j] == HL_NORMAL) {
+                    if (current_color != -1) {
+                        abAppend(&ab, "\x1b[39m", 5);
+                        current_color = -1;
+                    }
+                    abAppend(&ab, c + j, 1);
+                } else {
+                    int color = syntaxToColor(hl[j]);
+                    if (color != current_color) {
+                        char buf[16];
+                        int clen = snprintf(buf, sizeof(buf), "\x1b[%dm", color);
+                        current_color = color;
+                        abAppend(&ab, buf , clen);
+                    }
+                    abAppend(&ab, c + j, 1);
+                }
+            }
         }
         abAppend(&ab, "\x1b[39m", 5);
         abAppend(&ab, "\x1b[0K", 4);

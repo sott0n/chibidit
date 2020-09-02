@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
     }
 
     initEditor();
+    selectSyntaxHighlight(argv[1]);
     editorOpen(argv[1]);
     enableRawMode(STDIN_FILENO);
 
