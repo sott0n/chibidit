@@ -68,7 +68,7 @@ void refreshScreen(void) {
         }
 
         r = &EC.row[filerow];
-        int len = r->size - EC.col_offset;
+        int len = r->rsize - EC.col_offset;
         int current_color = -1;
         if (len > 0) {
             if (len > EC.screencols)
