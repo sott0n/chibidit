@@ -128,6 +128,31 @@ fixcursor:
     EC.col_offset = 0;
 }
 
+void delAtChar(void) {
+    int filerow = EC.row_offset + EC.cy;
+    int filecol = EC.col_offset + EC.cx;
+    Erow *row = (filerow > EC.numrows) ? NULL : &EC.row[filerow];
+
+    if (!row || (filecol == 0 && filerow == 0))
+        return;
+    if (filecol == 0) {
+        // Handle the case of column 0, we need to move the current line
+        // on the left of the next one.
+        delRow(filerow);
+        row = NULL;
+        if (EC.cy == 0)
+            EC.row_offset--;
+        EC.cx = 0;
+    } else {
+        rowDelChar(row, filecol);
+        if (EC.cx == 0 && EC.col_offset)
+            EC.col_offset--;
+    }
+    if (row)
+        updateRow(row);
+    EC.dirty++;
+}
+
 void delChar(void) {
     int filerow = EC.row_offset + EC.cy;
     int filecol = EC.col_offset + EC.cx;

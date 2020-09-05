@@ -111,6 +111,7 @@ enum KEY_ACTIONS {
     ARROW_UP,
     ARROW_DOWN,
     DEL_KEY,
+    DEL_AT_KEY,
     HOME_KEY,
     END_KEY,
     PAGE_UP,
@@ -142,6 +143,7 @@ void rowDelChar(Erow *row, int at);
 void insertRow(int at, char *s, size_t len);
 void rowInsertChar(Erow *row, int at, int c);
 void insertNewLine(void);
+void delAtChar(void);
 void delChar(void);
 void rowAppendString(Erow *row, char *s, size_t len);
 void freeRow(Erow *row);

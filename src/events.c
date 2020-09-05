@@ -71,7 +71,7 @@ void moveCursor(int key) {
     }
 }
 
-#define QUIT_TIMES 3
+#define QUIT_TIMES 1
 void processKeyPress(int fd) {
     static int quit_times = QUIT_TIMES;
 
@@ -80,11 +80,12 @@ void processKeyPress(int fd) {
         switch (c) {
         case CTRL_C: // Ignore ctrl-c
             break;
+
         case CTRL_Q: // Quit
             // Quit if this file was already saved.
             if (EC.dirty && quit_times) {
                 setStatusMsg("WARNING!! File has unsaved changes. "
-                        "Press Ctrl-Q %d more times to quit.", quit_times);
+                        "Press Ctrl-Q %d to quit.", quit_times);
                 quit_times--;
                 return;
             }
@@ -117,6 +118,9 @@ void processKeyPress(int fd) {
         }
         case DEL_KEY:
             delChar();
+            break;
+        case DEL_AT_KEY:
+            delAtChar();
             break;
         case ARROW_UP:
         case ARROW_DOWN:

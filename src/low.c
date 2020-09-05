@@ -158,9 +158,12 @@ int readKey(int fd) {
             }
             break;
         case 'i':
-            setStatusMsg("---INSERT MODE---");
-            EC.mode = INSERT;
-            return ESC;
+            if (EC.mode == NORMAL) {
+                setStatusMsg("---INSERT MODE---");
+                EC.mode = INSERT;
+                return ESC;
+            }
+            return c;
         case 'k':
             if (EC.mode == NORMAL) return ARROW_UP;
             return c;
@@ -173,7 +176,10 @@ int readKey(int fd) {
         case 'h':
             if (EC.mode == NORMAL) return ARROW_LEFT;
             return c;
-        case 127:
+        case 'x':
+            if (EC.mode == NORMAL) return DEL_AT_KEY;
+            return c;
+        case 127: // DEL Key
             if (EC.mode == INSERT) return DEL_KEY;
             return c;
         default:
