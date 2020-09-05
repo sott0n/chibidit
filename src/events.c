@@ -76,65 +76,79 @@ void processKeyPress(int fd) {
     static int quit_times = QUIT_TIMES;
 
     int c = readKey(fd);
-    switch (c) {
-    case ENTER:  // Enter
-        insertNewLine();
-        break;
-    case CTRL_C: // Ignore ctrl-c
-        break;
-    case CTRL_Q: // Quit
-        // Quit if this file was already saved.
-        if (EC.dirty && quit_times) {
-            setStatusMsg("WARNING!! File has unsaved changes. "
-                    "Press Ctrl-Q %d more times to quit.", quit_times);
-            quit_times--;
-            return;
-        }
-        exit(0);
-        break;
-    case CTRL_S: // Save
-        save();
-        break;
-    case CTRL_F: // Find mode
-        // TODO: implement find string
-        break;
-    case BACKSPACE:
-    case CTRL_H:
-    case DEL_KEY:
-        delChar();
-        break;
-    case PAGE_UP:
-    case PAGE_DOWN: {
-        int times = EC.screenrows;
-        if (c == PAGE_UP && EC.cy != 0) {
-            EC.cy = 0;
-            while(times--)
-                moveCursor(ARROW_UP);
+    if (EC.mode == NORMAL) {
+        switch (c) {
+        case CTRL_C: // Ignore ctrl-c
             break;
-        }
+        case CTRL_Q: // Quit
+            // Quit if this file was already saved.
+            if (EC.dirty && quit_times) {
+                setStatusMsg("WARNING!! File has unsaved changes. "
+                        "Press Ctrl-Q %d more times to quit.", quit_times);
+                quit_times--;
+                return;
+            }
+            exit(0);
+            break;
+        case CTRL_S: // Save
+            save();
+            break;
+        case CTRL_F: // Find mode
+            // TODO: implement find string
+            break;
+        case BACKSPACE:
+        case CTRL_H:
+        case PAGE_UP:
+        case PAGE_DOWN: {
+            int times = EC.screenrows;
+            if (c == PAGE_UP && EC.cy != 0) {
+                EC.cy = 0;
+                while(times--)
+                    moveCursor(ARROW_UP);
+                break;
+            }
 
-        if (c == PAGE_DOWN && EC.cy != EC.screenrows - 1) {
-            EC.cy = EC.screenrows - 1;
-            while(times--)
-                moveCursor(ARROW_DOWN);
+            if (c == PAGE_DOWN && EC.cy != EC.screenrows - 1) {
+                EC.cy = EC.screenrows - 1;
+                while(times--)
+                    moveCursor(ARROW_DOWN);
+                break;
+            }
+        }
+        case DEL_KEY:
+            delChar();
+            break;
+        case ARROW_UP:
+        case ARROW_DOWN:
+        case ARROW_LEFT:
+        case ARROW_RIGHT:
+            moveCursor(c);
+            break;
+        case CTRL_L: // Clear screen.
+            break;
+        case ESC:
             break;
         }
-    }
-    case ARROW_UP:
-    case ARROW_DOWN:
-    case ARROW_LEFT:
-    case ARROW_RIGHT:
-        moveCursor(c);
-        break;
-    case CTRL_L: // Clear screen.
-        break;
-    case ESC:
-        // TODO: switch mode
-        // normal <-> insert <-> command line <-> visualize
-        break;
-    default:
-        insertChar(c);
-        break;
+    } else if (EC.mode == INSERT) {
+        switch(c) {
+        case ENTER:  // Enter
+            insertNewLine();
+            break;
+        case DEL_KEY:
+            delChar();
+            break;
+        case ARROW_UP:
+        case ARROW_DOWN:
+        case ARROW_LEFT:
+        case ARROW_RIGHT:
+            moveCursor(c);
+            break;
+        case ESC:
+            break;
+        default:
+            insertChar(c);
+            break;
+        }
     }
 
     // Reset it to the original time.

@@ -76,39 +76,45 @@ struct EditorConf {
     char statusmsg[80];
     time_t statusmsg_time;
     struct editorSyntax *syntax;    /* Current syntax highlight, or NULL. */
+    int mode;           /* Editor Mode, Normal/Insert/Visualize */
 };
 
 extern struct EditorConf EC;
+
+enum EDITOR_MODO {
+    NORMAL,
+    INSERT,
+};
 
 // -------------------------------------------------------------
 // Keyborad Inputs
 // -------------------------------------------------------------
 enum KEY_ACTIONS {
-        KEY_NULL = 0,       /* NULL */
-        CTRL_C = 3,         /* Ctrl-c */
-        CTRL_D = 4,         /* Ctrl-d */
-        CTRL_F = 6,         /* Ctrl-f */
-        CTRL_H = 8,         /* Ctrl-h */
-        TAB = 9,            /* Tab */
-        CTRL_L = 12,        /* Ctrl+l */
-        ENTER = 13,         /* Enter */
-        CTRL_Q = 17,        /* Ctrl-q */
-        CTRL_S = 19,        /* Ctrl-s */
-        CTRL_U = 21,        /* Ctrl-u */
-        ESC = 27,           /* Escape */
-        BACKSPACE =  127,   /* Backspace */
+    KEY_NULL = 0,       /* NULL */
+    CTRL_C = 3,         /* Ctrl-c */
+    CTRL_D = 4,         /* Ctrl-d */
+    CTRL_F = 6,         /* Ctrl-f */
+    CTRL_H = 8,         /* Ctrl-h */
+    TAB = 9,            /* Tab */
+    CTRL_L = 12,        /* Ctrl+l */
+    ENTER = 13,         /* Enter */
+    CTRL_Q = 17,        /* Ctrl-q */
+    CTRL_S = 19,        /* Ctrl-s */
+    CTRL_U = 21,        /* Ctrl-u */
+    ESC = 27,           /* Escape */
+    BACKSPACE =  127,   /* Backspace */
 
-        /* The following are just soft codes, not really reported by the
-         * terminal directly. */
-        ARROW_LEFT = 1000,
-        ARROW_RIGHT,
-        ARROW_UP,
-        ARROW_DOWN,
-        DEL_KEY,
-        HOME_KEY,
-        END_KEY,
-        PAGE_UP,
-        PAGE_DOWN
+    /* The following are just soft codes, not really reported by the
+     * terminal directly. */
+    ARROW_LEFT = 1000,
+    ARROW_RIGHT,
+    ARROW_UP,
+    ARROW_DOWN,
+    DEL_KEY,
+    HOME_KEY,
+    END_KEY,
+    PAGE_UP,
+    PAGE_DOWN
 };
 
 // -------------------------------------------------------------

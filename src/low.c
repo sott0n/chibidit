@@ -119,6 +119,8 @@ int readKey(int fd) {
     while(1) {
         switch(c) {
         case ESC:    /* escape sequence */
+            setStatusMsg("---NORMAL MODE---");
+            EC.mode = NORMAL;
             /* If this is just an ESC, we'll timeout here. */
             if (read(fd, seq, 1) == 0) return ESC;
             if (read(fd, seq+1, 1) == 0) return ESC;
@@ -155,6 +157,25 @@ int readKey(int fd) {
                 }
             }
             break;
+        case 'i':
+            setStatusMsg("---INSERT MODE---");
+            EC.mode = INSERT;
+            return ESC;
+        case 'k':
+            if (EC.mode == NORMAL) return ARROW_UP;
+            return c;
+        case 'j':
+            if (EC.mode == NORMAL) return ARROW_DOWN;
+            return c;
+        case 'l':
+            if (EC.mode == NORMAL) return ARROW_RIGHT;
+            return c;
+        case 'h':
+            if (EC.mode == NORMAL) return ARROW_LEFT;
+            return c;
+        case 127:
+            if (EC.mode == INSERT) return DEL_KEY;
+            return c;
         default:
             return c;
         }
