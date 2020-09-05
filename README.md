@@ -5,7 +5,7 @@ This project based the [Kilo editor](https://github.com/antirez/kilo/) to study 
 ## Feature
 - Simply and small text editor
 - Like a Vim (**Working**)
-- Support Syntax Highlight(**In future**)
+- Support Syntax Highlight
 
 ## Build & Start
 Run make to build:
@@ -22,5 +22,5 @@ $ ./chibidit
 $ ./chibidit <file>
 ```
 
-## Reference
-- Kilo: https://github.com/antirez/kilo/
+## Acknowledgements
+- https://github.com/antirez/kilo
