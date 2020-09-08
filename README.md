@@ -5,7 +5,15 @@ This project based the [Kilo editor](https://github.com/antirez/kilo/) to study 
 ## Feature
 - Simply and small text editor
 - Like a Vim (**Working**)
+  - Support some mode
+  - Key binding
+  - Split display
+  - etc
 - Support Syntax Highlight
+- Improve rendering algorighm with syntax highlight (**In future**)
+  - If a large file (over 10,000 lines) opend, too slow to render with scroll
+- Support UTF-8 (**In future**)
+  - Not yet support multi-bytes code, only ascii
 
 ## Build & Start
 Run make to build:
